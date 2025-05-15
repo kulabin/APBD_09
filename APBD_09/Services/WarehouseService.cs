@@ -113,5 +113,32 @@ public class WarehouseService : IWarehouseService
         var res = await cmd.ExecuteNonQueryAsync();
         return Convert.ToInt32(res);
     }
+    
+    public async Task<int> AddProductWithProcedure(AddProdRequest request)
+    {
+        if (request.Amount <= 0)
+        {
+            throw new ArgumentException("Amount must be greater than zero.");
+        }
+        
+        using var connection = new SqlConnection(_connectionString);
+        using var cmd = new SqlCommand("sp_AddProduct", connection)
+        {
+            CommandType = System.Data.CommandType.StoredProcedure
+        };
+        cmd.Parameters.AddWithValue("@pid", request.ProductId);
+        cmd.Parameters.AddWithValue("@wid", request.WarehouseId);
+        cmd.Parameters.AddWithValue("@amt",request.Amount);
+        cmd.Parameters.AddWithValue("@ocr", request.OrderCreatedAt);
+        
+        var outputParam = new SqlParameter("@newId", System.Data.SqlDbType.Int)
+        {
+            Direction = System.Data.ParameterDirection.Output
+        };
+        cmd.Parameters.Add(outputParam);
+        await  connection.OpenAsync();
+        await cmd.ExecuteNonQueryAsync();
+        return (int)outputParam.Value;
+    }
 
 }
